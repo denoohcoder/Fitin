@@ -12,8 +12,8 @@ import { SupportModal } from './components/SupportModal';
 export default function App() {
   const [currentStep, setCurrentStep] = useState<StepNumber>(1);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [applicationReference, setApplicationReference] = useState('');
 
-  // Step 1: Loan calculator
   const [loan, setLoan] = useState<LoanState>({
     amount: 2500,
     periodMonths: 12,
@@ -21,7 +21,6 @@ export default function App() {
     currency: 'USD',
   });
 
-  // Step 2: Personal & financial details (empty by default)
   const [details, setDetails] = useState<PersonalDetails>({
     fullName: '',
     nationalId: '',
@@ -31,7 +30,6 @@ export default function App() {
     monthlyIncome: '',
   });
 
-  // Step 3: Mobile phone login
   const [loginPhone, setLoginPhone] = useState<string>('');
 
   const handleUpdateLoan = (partial: Partial<LoanState>) => {
@@ -64,13 +62,35 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleStep4Verified = () => {
+  const handleStep4Verified = async () => {
+    const response = await fetch('/api/application', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: loan.amount,
+        months: loan.periodMonths,
+        currency: loan.currency,
+        loanPurpose: details.loanPurpose,
+      }),
+    });
+
+    const result = (await response.json()) as {
+      reference?: string;
+      error?: string;
+    };
+
+    if (!response.ok || !result.reference) {
+      throw new Error(result.error || 'Could not submit the application. Please try again.');
+    }
+
+    setApplicationReference(result.reference);
     setCurrentStep(5);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRestart = () => {
     setCurrentStep(1);
+    setApplicationReference('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -123,6 +143,7 @@ export default function App() {
             loan={loan}
             details={details}
             phoneNumber={loginPhone || details.phoneNumber}
+            referenceNumber={applicationReference}
             onRestart={handleRestart}
             onOpenSupport={() => setIsSupportOpen(true)}
           />
